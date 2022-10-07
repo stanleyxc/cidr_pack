@@ -98,20 +98,21 @@ class Cidr:
     # given an IP numberic range, return a list of cidr blocks represent the range
     def ip_range_to_cidrs(self, start: int, end: int):
         c_blocks = []
-        # print(f"start:{start}[{self.dot_notation(start)}], end:{end}/[{self.dot_notation(end)}]")
         if start == end: 
             return [ self.dot_notation(start) + "/32" ]
         else:
             pow2 = floor(log2(end - start + 1))
-            #print(f"trying nth power of 2 : {pow2}")
             # find the largest cidr block that also begin with start ip; 
-            for n in range(pow2, 1, -1):
+            for n in range(pow2, 0, -1):
                 cidr = self.dot_notation(start, 32 - n )
                 (start_, end_) = self.ip_range_int(cidr)
                 if start_ ==  start:
                     break
-            # this is the largest cidr block begining with ip that's the same as start, save it.    
-            c_blocks.append(cidr)
+            if start_ < start:   # loop exhausted, but didn't find a cidr block matching start, add start/32
+                 c_blocks.append(self.dot_notation(start, 32))
+            else: 
+                # this is the largest cidr block begining with ip that's the same as start, save it.    
+                c_blocks.append(cidr)
             if end_ < end: 
                 #  calculate next cidr block.
                 c_blocks += self.ip_range_to_cidrs(end_ + 1, end)
@@ -126,8 +127,7 @@ class Cidr:
         ip_range_list.sort(key=lambda n: n[0])    #sort by start 
         m = []
         for x in ip_range_list:
-            
-            if len(m) == 0 or m[-1][1] < x[0]:
+            if len(m) == 0 or m[-1][1] + 1 < x[0] :
                 m.append((x)) 
             else:   # overlap, merge two ranges, 
                 if x[1] > m[-1][1]:
@@ -152,7 +152,7 @@ class Cidr:
             if start == end:
                 ips[self.dot_notation(start)] = 1
                 continue    
-            for ip_int in range(start, end, 1):
+            for ip_int in range(start, end + 1, 1):
                 ips[self.dot_notation(ip_int)] = 1
         return list(ips.keys())
     
